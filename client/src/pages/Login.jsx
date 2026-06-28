@@ -1,53 +1,79 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { login as loginUser } from '../services/authService.js';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
 const Login = () => {
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const location = useLocation();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+  const from = location.state?.from?.pathname || '/';
 
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm({ defaultValues: { email: '', password: '' } });
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
+  const onSubmit = async ({ email, password }) => {
     try {
-      const data = await loginUser(form);
-      login(data.user, data.token);
-      navigate('/');
+      await login(email, password);
+      navigate(from, { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError('root', {
+        message: err.response?.data?.message || 'Login failed. Please try again.',
+      });
     }
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '2rem auto' }}>
-      <h2>Login</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
-          required
-        />
-        <br />
-        <input
-          type="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })}
-          required
-        />
-        <br />
-        <button type="submit">Login</button>
+    <div className="auth-container">
+      <form className="auth-card" onSubmit={handleSubmit(onSubmit)}>
+        <h1>Log in</h1>
+
+        {errors.root && <p className="error">{errors.root.message}</p>}
+
+        <div className="field">
+          <label htmlFor="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            {...register('email', {
+              required: 'Email is required',
+              pattern: { value: /^\S+@\S+\.\S+$/, message: 'Enter a valid email' },
+            })}
+          />
+          {errors.email && <span className="error">{errors.email.message}</span>}
+        </div>
+
+        <div className="field">
+          <label htmlFor="password">Password</label>
+          <input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            {...register('password', { required: 'Password is required' })}
+          />
+          {errors.password && <span className="error">{errors.password.message}</span>}
+        </div>
+
+        <button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Logging in...' : 'Log in'}
+        </button>
+
+        <p className="auth-switch">
+          No account? <Link to="/register">Register</Link>
+        </p>
       </form>
-      {error ? <p style={{ color: 'red' }}>{error}</p> : null}
-      <p>
-        Don't have an account? <Link to="/register">Register</Link>
-      </p>
     </div>
   );
 };

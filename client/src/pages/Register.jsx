@@ -1,61 +1,109 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
-import { register as registerUser } from '../services/authService.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
 const Register = () => {
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
-  const [error, setError] = useState('');
+  const { register: registerUser, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const { login } = useAuth();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
+  });
 
+  const password = watch('password');
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
+  const onSubmit = async ({ name, email, password }) => {
     try {
-      const data = await registerUser(form);
-      login(data.user, data.token);
-      navigate('/');
+      await registerUser(name, email, password);
+      navigate('/', { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      setError('root', {
+        message: err.response?.data?.message || 'Registration failed. Please try again.',
+      });
     }
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '2rem auto' }}>
-      <h2>Register</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          placeholder="Name"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-          required
-        />
-        <br />
-        <input
-          type="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
-          required
-        />
-        <br />
-        <input
-          type="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })}
-          required
-        />
-        <br />
-        <button type="submit">Register</button>
+    <div className="auth-container">
+      <form className="auth-card" onSubmit={handleSubmit(onSubmit)}>
+        <h1>Create account</h1>
+
+        {errors.root && <p className="error">{errors.root.message}</p>}
+
+        <div className="field">
+          <label htmlFor="name">Name</label>
+          <input
+            id="name"
+            type="text"
+            autoComplete="name"
+            {...register('name', { required: 'Name is required' })}
+          />
+          {errors.name && <span className="error">{errors.name.message}</span>}
+        </div>
+
+        <div className="field">
+          <label htmlFor="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            {...register('email', {
+              required: 'Email is required',
+              pattern: { value: /^\S+@\S+\.\S+$/, message: 'Enter a valid email' },
+            })}
+          />
+          {errors.email && <span className="error">{errors.email.message}</span>}
+        </div>
+
+        <div className="field">
+          <label htmlFor="password">Password</label>
+          <input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            {...register('password', {
+              required: 'Password is required',
+              minLength: { value: 8, message: 'Password must be at least 8 characters' },
+            })}
+          />
+          {errors.password && <span className="error">{errors.password.message}</span>}
+        </div>
+
+        <div className="field">
+          <label htmlFor="confirmPassword">Confirm password</label>
+          <input
+            id="confirmPassword"
+            type="password"
+            autoComplete="new-password"
+            {...register('confirmPassword', {
+              required: 'Please confirm your password',
+              validate: (value) => value === password || 'Passwords do not match',
+            })}
+          />
+          {errors.confirmPassword && <span className="error">{errors.confirmPassword.message}</span>}
+        </div>
+
+        <button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Creating account...' : 'Register'}
+        </button>
+
+        <p className="auth-switch">
+          Already have an account? <Link to="/login">Log in</Link>
+        </p>
       </form>
-      {error ? <p style={{ color: 'red' }}>{error}</p> : null}
-      <p>
-        Already have an account? <Link to="/login">Login</Link>
-      </p>
     </div>
   );
 };
