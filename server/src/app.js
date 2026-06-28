@@ -9,6 +9,11 @@ const app = express();
 app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:5173" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use((req, res, next) => {
+  console.log(`📩 Incoming Request: ${req.method} ${req.path}`);
+  console.log("Current body:", req.body);
+  next();
+});
 
 // Health check
 app.get("/api/health", (req, res) => {
@@ -19,17 +24,12 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes);
 
-// 404 handler
-app.use((req, res, next) => {
-  res.status(404).json({ message: `Not found: ${req.originalUrl}` });
-});
-
 // Centralized error handler (must have 4 args)
 app.use((err, req, res, next) => {
+  console.error("❌ الخطأ الحقيقي هو:", err);
   const status = err.statusCode || 500;
   res.status(status).json({
     message: err.message || "Internal Server Error",
-    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 });
 

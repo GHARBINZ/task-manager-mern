@@ -30,8 +30,8 @@ export const register = async (req, res, next) => {
     const token = signToken(user._id);
 
     res.status(201).json({ token, user: sanitize(user) });
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -50,7 +50,7 @@ export const login = async (req, res, next) => {
 
     const token = signToken(user._id);
     res.status(200).json({ token, user: sanitize(user) });
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    next(error);
   }
 };
